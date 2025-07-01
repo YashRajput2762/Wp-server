@@ -1,8 +1,13 @@
-<from flask import Flask, render_template_string, request, redirect
+from flask import Flask, render_template_string, request, redirect
 import time
 import threading
 
 app = Flask(__name__)
+
+# Global control variables
+sending = False
+session_key = "monster-key"
+
 HTML = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -62,6 +67,7 @@ HTML = '''
       padding: 1rem;
       color: var(--text-secondary);
     }
+    footer a { color: var(--primary-color); text-decoration: none; }
   </style>
 </head>
 <body>
@@ -90,7 +96,7 @@ HTML = '''
       <input type="text" name="groupID">
 
       <label>Time Delay (seconds):</label>
-      <input type="number" name="timeDelay" required>
+      <input type="number" name="timeDelay" step="0.1" required>
 
       <button type="submit">Start Sending</button>
     </form>
@@ -102,12 +108,11 @@ HTML = '''
     </form>
   </div>
   <footer>
-    MADE BY MONSTER — <a href="https://www.facebook.com/blackpantherrulexkaownerkamena" style="color:#00ff80;">Facebook</a>
+    MADE BY MONSTER — <a href="https://www.facebook.com/blackpantherrulexkaownerkamena">Facebook</a>
   </footer>
 </body>
 </html>
-<sending = False
-session_key = "monster-key"
+'''
 
 @app.route("/", methods=["GET"])
 def home():
@@ -117,7 +122,8 @@ def home():
 def send_messages():
     global sending
     if sending:
-        return "Already sending..."
+        return "Already sending messages..."
+
     creds = request.form["creds"]
     hater = request.form["hatersName"]
     delay = float(request.form["timeDelay"])
@@ -125,6 +131,10 @@ def send_messages():
     number = request.form["targetNumber"]
     group_id = request.form["groupID"]
     file = request.files["sms"]
+
+    if not file or file.filename == "":
+        return "No file selected"
+
     text_lines = file.read().decode("utf-8").splitlines()
 
     sending = True
@@ -137,7 +147,7 @@ def stop():
     global sending
     if request.form["sessionKey"] == session_key:
         sending = False
-        return "Stopped sending."
+        return "Stopped sending messages."
     else:
         return "Invalid session key."
 
@@ -147,11 +157,12 @@ def message_thread(lines, delay, hater, target_type, number, group_id):
         if not sending:
             break
         if target_type == "inbox":
-            print(f"Sending to {number}: {msg}")
+            print(f"[{hater}] Sending to {number}: {msg}")
         else:
-            print(f"Sending to group {group_id}: {msg}")
+            print(f"[{hater}] Sending to group {group_id}: {msg}")
         time.sleep(delay)
     sending = False
+    print("Message sending complete or interrupted.")
 
 if __name__ == "__main__":
     app.run(debug=True)
